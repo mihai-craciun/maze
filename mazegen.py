@@ -103,9 +103,9 @@ class Maze:
         # if grid is less than 2x2 return
         if i2 - i1 < 2 or j2 - j1 < 2:
             return
-        # choose 2 random split indexes (vertical and horizontal)
-        y = random.randint(i1 + 1, i2 - 1)
-        x = random.randint(j1 + 1, j2 - 1)
+        # choose x, y in the middle
+        y = (i1 + i2) // 2
+        x = (j1 + j2) // 2
         # set walls
         for j in range(j1, j2):
             self.maze[y-1][j] &= self.neg_mask(self.DOWN)
