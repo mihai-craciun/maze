@@ -1,5 +1,6 @@
 from typing import Tuple, List
 from disjoint_set import DisjointSet
+from collections import deque
 import random
 
 class Maze:
@@ -16,6 +17,8 @@ class Maze:
     OFF_DOWN = (1, 0)
     # Special markers
     EMPTY = 0
+    VISITED = 1
+    SOLUTION = 2
 
     # Algorithms
     DFS = 'dfs'
@@ -41,6 +44,7 @@ class Maze:
         self.h = h
         self.start = start
         self.maze = None
+        self.solution = None
         self.algorithm = algorithm
         if end is None:
             end = (h-1, w-1)
@@ -143,6 +147,35 @@ class Maze:
         elif self.algorithm == self.DIVISION:
             self.populate_recursive((0, 0), (self.h, self.w))
     
+    def solve(self):
+        self.solution = [[self.EMPTY for _ in range(self.w)] for _ in range(self.h)]
+        prevs = {self.start: None}
+        queue = deque()
+        queue.append(self.start)
+        while queue:
+            x = queue.popleft()
+            if x == self.end:
+                break
+            i, j = x
+            self.solution[i][j] = self.VISITED
+            # get available neighbors
+            nbs = []
+            for k in self.OFF_DIR:
+                (oi, oj), d = k, self.OFF_DIR[k]
+                # if valid neighbor (in offsets, dir not blocked and not visited)
+                if ((0 <= i + oi < self.h and 0 <= j + oj < self.w )
+                and self.maze[i+oi][j+oj] & self.OPOSITE[d] > 0 and self.solution[i+oi][j+oj] == self.EMPTY and (i+oi, j+oj) not in prevs):
+                    nbs.append((i+oi, j+oj))
+                    prevs[(i+oi, j+oj)] = x
+                # add neighbors in queue
+                queue.extend(nbs)
+        # calculate paths
+        p = self.end
+        while p is not None:
+            i, j = p
+            self.solution[i][j] = self.SOLUTION
+            p = prevs[p]
+    
     def erase(self):
         if self.algorithm == self.DIVISION:
             self.maze = [[self.LEFT | self.RIGHT | self.UP | self.DOWN for _ in range(self.w)] for _ in range(self.h)]
@@ -157,8 +190,11 @@ class Maze:
     def print(self):
         if self.maze is None:
             return
-        for line in self.maze:
-            print("".join(list(map(lambda c: self.CHARS[c], line))))
+        for i, line in enumerate(self.maze):
+            char_func = lambda j_v: self.CHARS_EMPTY[j_v[1]] if (self.solution is not None 
+            and self.solution[i][j_v[0]] == self.SOLUTION) else self.CHARS[j_v[1]]
+            line = list(map(char_func, enumerate(line)))
+            print("".join(line))
 
     def compute_aux_maps(self):
             self.OFF_DIR = {
@@ -193,11 +229,30 @@ class Maze:
                 self.RIGHT | self.UP | self.DOWN: "\u2523",
                 self.LEFT | self.RIGHT | self.UP | self.DOWN: "\u254b"
             }
+            self.CHARS_EMPTY = {
+                self.EMPTY: " ",
+                self.LEFT: "\u2555",
+                self.RIGHT: "\u2558",
+                self.UP: "\u2559",
+                self.DOWN: "\u2556",
+                self.LEFT | self.RIGHT: "\u2550",
+                self.LEFT | self.UP: "\u255d",
+                self.LEFT | self.DOWN: "\u2557",
+                self.RIGHT | self.UP: "\u255a",
+                self.RIGHT | self.DOWN: "\u2554",
+                self.UP | self.DOWN: "\u2551",
+                self.LEFT | self.RIGHT | self.UP: "\u2569",
+                self.LEFT | self.RIGHT | self.DOWN: "\u2566",
+                self.LEFT | self.UP | self.DOWN: "\u2563",
+                self.RIGHT | self.UP | self.DOWN: "\u2560",
+                self.LEFT | self.RIGHT | self.UP | self.DOWN: "\u256c"
+            }
 
 
 if __name__ == "__main__":
-    maze = Maze(80, 40, algorithm=Maze.DIVISION)
+    maze = Maze(20, 20, algorithm=Maze.DIVISION)
     maze.populate()
+    maze.solve()
     maze.print()
 
 
